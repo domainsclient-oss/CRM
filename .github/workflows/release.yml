@@ -20,7 +20,7 @@ jobs:
     outputs:
       instances: ${{ steps.list.outputs.instances }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
       - uses: pnpm/action-setup@v4
@@ -43,7 +43,7 @@ jobs:
       matrix:
         instance: ${{ fromJson(needs.plan.outputs.instances) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
       - name: Deployment not enabled yet

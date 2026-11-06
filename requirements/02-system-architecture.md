@@ -87,7 +87,7 @@ flowchart LR
 │  │  │  ├─ proxy.ts               # Next 16 proxy (formerly middleware) — host classification & rewrite only
 │  │  │  ├─ app/
 │  │  │  │  ├─ (marketing)/        # www host: /, /features, /agencies, /pricing, /security, /docs/[...slug], /legal/*, /contact, /find-workspace
-│  │  │  │  ├─ _t/[host]/          # INTERNAL rewrite target for every workspace host (never linked directly)
+│  │  │  │  ├─ t/[host]/          # INTERNAL rewrite target for every workspace host (never linked directly)
 │  │  │  │  │  ├─ (auth)/          # /login, /reset-password, /invite/[token] (account creation happens here)
 │  │  │  │  │  └─ (app)/           # authenticated CRM — layout calls requireTenantContext()
 │  │  │  │  │     ├─ dashboard/ contacts/ companies/ leads/ deals/ tasks/ reports/ notifications/ trash/
@@ -106,8 +106,8 @@ flowchart LR
 │  │  │  └─ ui/                                 # app-specific composites (shell, nav)
 │  └─ console/                     # one app, two host contexts
 │     └─ src/app/
-│        ├─ _platform/ ...         # console.example.com — platform staff (agencies, workspaces, plans, gateways, domains, instance health)
-│        └─ _agency/ ...           # partners.example.com — agency staff (their workspaces, branding, domains, billing, staff)
+│        ├─ platform/ ...         # console.example.com — platform staff (agencies, workspaces, plans, gateways, domains, instance health)
+│        └─ agency/ ...           # partners.example.com — agency staff (their workspaces, branding, domains, billing, staff)
 ├─ packages/
 │  ├─ core/                        # server-only: session, contexts (tenant/agency/platform), authz, repositories, services, audit, rate-limit, logger, email, payments/, domains/
 │  ├─ shared/                      # isomorphic: zod schemas, permissions, types, money/date utils, branding theme
@@ -132,20 +132,22 @@ Layering rules (ESLint `no-restricted-imports` / boundaries):
 
 ## 3. Host routing and the proxy
 
+> **Implementation notes (Phase 2):** internal rewrite segments are `t/[host]` (web) and `platform/`, `agency/` (console) — `_`-prefixed folders are private in the App Router and never route. The proxy returns 404 for direct requests to these prefixes.
+
 Next.js 16 renamed `middleware.ts` to `proxy.ts` **(verify exact runtime semantics on Vercel in T-01-01)**. The proxy only classifies hosts and rewrites — never authorizes (middleware-only auth has had real bypasses, e.g. CVE-2025-29927).
 
 ```mermaid
 flowchart TD
   R[Incoming request] --> H{Host header class}
-  H -- "www.example.com / apex" --> M[Marketing routes\nblock /_t/* → 404]
+  H -- "www.example.com / apex" --> M[Marketing routes\nblock /t/* → 404]
   H -- "console.example.com / partners.example.com" --> C[apps/console project]
-  H -- "{slug}.app.example.com\n{slug}.{agency base domain}\nany other host" --> T[Treat as candidate workspace host:\nrewrite /path → /_t/{host}/path\nX-Robots-Tag: noindex\nno-store for non-static]
+  H -- "{slug}.app.example.com\n{slug}.{agency base domain}\nany other host" --> T[Treat as candidate workspace host:\nrewrite /path → /t/{host}/path\nX-Robots-Tag: noindex\nno-store for non-static]
   T --> L[Server layout: resolveWorkspaceByHost(host)\n→ tenantDomains/{host} verified & active?]
   L -- no --> N[Neutral 404]
   L -- yes --> CTX[requireTenantContext]
 ```
 
-- Because custom domains are arbitrary, the proxy cannot allowlist them by pattern; **verification happens in the server layout** against `tenantDomains/{host}` (status `active`, cached 60 s). Vercel only routes domains registered on the project, which is a second gate.
+- Because custom domains are arbitrary, the proxy cannot allowlist them by pattern. **As implemented (Phase 2):** the proxy looks up `tenantDomains/{host}` (status `active`, 60 s in-process cache shared with the server contexts) and returns a real 404 *before* streaming starts — a `notFound()` inside a streamed `<Suspense>` boundary would otherwise produce HTTP 200 (Next.js 16 docs: request-time checks belong in Proxy). The server contexts still re-check the mapping. Vercel only routes domains registered on the project, which is a second gate.
 - Email links and redirects are built from the workspace's stored **canonical host**, never from the request `Host` header (prevents host-header poisoning).
 - Platform subdomain of a workspace that has an active custom domain 301-redirects to the canonical host (except `/api/*`).
 
@@ -318,7 +320,7 @@ Defense in depth — each layer independently prevents cross-workspace and cross
 
 | Layer | Control |
 |-------|---------|
-| Routing | Workspace determined by verified host mapping; `_t/[host]` cannot be requested directly. Agency determined from staff record, not host. |
+| Routing | Workspace determined by verified host mapping; `t/[host]` cannot be requested directly. Agency determined from staff record, not host. |
 | Session | Host-only `__Host-` cookies; never shared between workspace hosts, partners, or console. |
 | Context | `requireTenantContext` / `requireAgencyContext` / `requirePlatformContext` per host class. |
 | Data access | Repositories derive paths from context; documents carry `tenantId`/`agencyId` checked on read. |

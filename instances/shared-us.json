@@ -1,0 +1,43 @@
+{
+  "$comment": "Non-secret instance registry (ADR-019, requirements/02 §11). Placeholder values until T-01-09 provisions real projects. Never put secrets here.",
+  "name": "shared-us",
+  "region": {
+    "firestore": "us-east1",
+    "functions": "us-east1",
+    "vercel": "iad1"
+  },
+  "defaultCurrency": "USD",
+  "environments": {
+    "dev": {
+      "firebaseProjectId": "<dev-project-id>",
+      "domains": {
+        "marketing": "www.dev.example.com",
+        "appBase": "app.dev.example.com",
+        "console": "console.dev.example.com",
+        "partners": "partners.dev.example.com"
+      }
+    },
+    "staging": {
+      "firebaseProjectId": "<staging-project-id>",
+      "domains": {
+        "marketing": "www.staging.example.com",
+        "appBase": "app.staging.example.com",
+        "console": "console.staging.example.com",
+        "partners": "partners.staging.example.com"
+      }
+    },
+    "production": {
+      "firebaseProjectId": "<prod-project-id>",
+      "domains": {
+        "marketing": "www.example.com",
+        "appBase": "app.example.com",
+        "console": "console.example.com",
+        "partners": "partners.example.com"
+      }
+    }
+  },
+  "vercel": {
+    "webProjectId": "<vercel-web-project-id>",
+    "consoleProjectId": "<vercel-console-project-id>"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@crm/ui/*": ["./src/*"] }
+  },
+  "include": ["src", "../../test/setup-dom.ts"]
+}

@@ -1,0 +1,74 @@
+# Production release across all instances (requirements/10 §5). Skeleton: deploy steps
+# stay disabled until T-01-09 verifies Vercel OIDC, GCP Workload Identity Federation, and
+# project IDs. Enable by setting repository variable DEPLOY_ENABLED=true.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (vX.Y.Z) built from green main
+        required: true
+
+permissions:
+  contents: read
+  id-token: write # OIDC for keyless GCP / Vercel auth
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      instances: ${{ steps.list.outputs.instances }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate instance registry
+        run: pnpm exec vitest run --project node scripts/instances.test.ts
+      - id: list
+        run: echo "instances=$(node -e 'console.log(JSON.stringify(require("fs").readdirSync("instances").filter(f=>f.endsWith(".json")).map(f=>f.slice(0,-5))))')" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: plan
+    runs-on: ubuntu-latest
+    environment: production # requires human approval (H6)
+    strategy:
+      max-parallel: 1 # one instance at a time; a failure halts the rollout
+      matrix:
+        instance: ${{ fromJson(needs.plan.outputs.instances) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Deployment not enabled yet
+        if: vars.DEPLOY_ENABLED != 'true'
+        run: |
+          echo "::error::Deploys are disabled until T-01-09 completes (set DEPLOY_ENABLED=true)."
+          exit 1
+      # Steps to add after T-01-09 (order per requirements/10 §5):
+      # 1. google-github-actions/auth (WIF) → verify backups + record PITR timestamp
+      # 2. firebase deploy --only firestore:indexes (wait READY) → migrations (approved) → rules → functions
+      # 3. vercel deploy --prebuilt --prod for web and console
+      # 4. smoke tests against the instance; on failure: vercel rollback and stop
+      # Step 4 is ready (scripts/smoke-deploy.mjs, read-only; validated locally 2026-11-05):
+      - uses: pnpm/action-setup@v4
+        if: vars.DEPLOY_ENABLED == 'true'
+      - uses: actions/setup-node@v4
+        if: vars.DEPLOY_ENABLED == 'true'
+        with:
+          node-version: 24
+      - name: Post-deploy smoke
+        if: vars.DEPLOY_ENABLED == 'true'
+        run: |
+          eval "$(node -e '
+            const i = JSON.parse(require("fs").readFileSync("instances/${{ matrix.instance }}.json", "utf8"));
+            const d = i.environments.production.domains;
+            console.log(`M=${d.marketing} C=${d.console} P=${d.partners} A=${d.appBase}`);
+          ')"
+          node scripts/smoke-deploy.mjs --marketing "$M" --console "$C" --partners "$P" --app-base "$A"

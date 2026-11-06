@@ -49,3 +49,22 @@ pnpm-debug.log*
 Thumbs.db
 *.swp
 .idea/
+
+# local portable tooling (e.g. JDK for Firebase emulators)
+.tools/
+
+# Cloud Functions bundle
+functions/lib/
+
+# Generated SBOM (pnpm sbom)
+sbom.cdx.json
+
+# Load-test inputs (staging credentials / build-specific IDs)
+load/users.json
+load/actions.json
+
+# ZAP reports
+security/zap/*.html
+
+# Real UAT pilot config (emails of pilot users)
+uat/pilot.json

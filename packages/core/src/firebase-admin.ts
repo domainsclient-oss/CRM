@@ -9,7 +9,10 @@ import {
 } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { initializeFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { getServerEnv, type ServerEnv } from "./server-env";
+
+type Bucket = ReturnType<ReturnType<typeof getStorage>["bucket"]>;
 
 // Admin SDK bypasses Firestore Security Rules: only server code may import this
 // module (enforced by "server-only"). See requirements/02 §5 and 04 §6.
@@ -54,12 +57,49 @@ export function getAdminApp(): App {
 
 export function getDb(): Firestore {
   if (!globalForFirebase.__crmFirestore) {
-    // REST transport avoids gRPC start-up cost in serverless functions (Vercel).
-    globalForFirebase.__crmFirestore = initializeFirestore(getAdminApp(), { preferRest: true });
+    // REST transport avoids gRPC start-up cost in serverless functions (Vercel), but it
+    // ignores FIRESTORE_EMULATOR_HOST and looks for cloud credentials — so the
+    // emulator uses the default transport.
+    const env = getServerEnv();
+    const useEmulator = Boolean(env.FIRESTORE_EMULATOR_HOST);
+    globalForFirebase.__crmFirestore = initializeFirestore(
+      getAdminApp(),
+      useEmulator ? {} : { preferRest: true },
+      env.FIRESTORE_DATABASE_ID,
+    );
   }
   return globalForFirebase.__crmFirestore;
 }
 
+const namedDbs = new Map<string, Firestore>();
+
+/** Another database of the same project (restore drills compare a restored copy with the source). */
+export function getNamedDb(databaseId: string): Firestore {
+  if (databaseId === getServerEnv().FIRESTORE_DATABASE_ID) return getDb();
+  let db = namedDbs.get(databaseId);
+  if (!db) {
+    db = initializeFirestore(getAdminApp(), {}, databaseId);
+    namedDbs.set(databaseId, db);
+  }
+  return db;
+}
+
 export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
+}
+
+/** Brand-assets bucket (logos, favicons). The storage emulator is used when configured. */
+export function getBrandBucket(): Bucket {
+  const env = getServerEnv();
+  return getStorage(getAdminApp()).bucket(
+    env.FIREBASE_STORAGE_BRAND_BUCKET ?? `${env.FIREBASE_PROJECT_ID}-brand-assets`,
+  );
+}
+
+/** Private bucket (imports, exports). Objects are only ever served through authenticated routes. */
+export function getPrivateBucket(): Bucket {
+  const env = getServerEnv();
+  return getStorage(getAdminApp()).bucket(
+    env.FIREBASE_STORAGE_PRIVATE_BUCKET ?? `${env.FIREBASE_PROJECT_ID}-private`,
+  );
 }

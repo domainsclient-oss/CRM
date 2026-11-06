@@ -225,7 +225,7 @@ service cloud.firestore {
 | Email templates | Logic-less template engine with HTML escaping; tenant text plain only |
 | Log injection | Structured JSON logging (no string concatenation of user input) |
 | CSV injection | Export prefixing (FR-RPT-002) |
-| CSRF | Server Actions: Next.js compares `Origin` to `Host` **(verify Next 16 behavior)** + `serverActions.allowedOrigins` restricted; Route Handlers with state change: require `Origin` in allowlist + double-submit CSRF token for `/api/auth/session`; SameSite=Lax cookies; no state change on GET |
+| CSRF | **As implemented (Phase 2):** Server Actions — Next.js rejects a mismatched `Origin` but lets requests *without* an Origin through, so the action wrappers additionally require a present, same-host `Origin`. Session route handlers — same Origin check plus a required custom header `X-CRM-Request: 1` (forces a CORS preflight that is never allowed), replacing the planned double-submit token. SameSite=Lax cookies; no state change on GET except the single-use, token-authorized "not me" revocation link |
 | CORS | No CORS headers (same-origin only) |
 | SSRF | Server never fetches user-supplied URLs in MVP (no link previews, no logo-by-URL, no webhooks). Future webhook/URL fetch features require an SSRF guard (DNS resolution allowlist, block private/link-local/metadata IPs, no redirects) |
 | Open redirect | `next`/`returnTo` params must be relative paths matching `^/[A-Za-z0-9/_-]*$` |

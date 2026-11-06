@@ -29,7 +29,7 @@
 | TypeScript | 5.x latest stable (verify) | Types |
 | Vercel CLI | Latest stable | Env sync, deploys, domains, rollback |
 | Firebase CLI (`firebase-tools`) | Latest stable (verify) | Emulators, rules/index/functions deploys |
-| Java JDK | Version required by Firebase emulators (verify; 21 currently recommended) | Emulators |
+| Java JDK | **21 or newer** (confirmed: firebase-tools 15.x refuses older Java) | Emulators |
 | Google Cloud CLI (`gcloud`) | Latest | IAM, WIF, TTL, backups, Secret Manager |
 | Playwright | Latest stable + browsers | E2E |
 | Git | ≥ 2.40 | VCS |
@@ -78,21 +78,24 @@ Rules: SCREAMING_SNAKE_CASE; booleans `true|false`; durations suffixed with unit
 | `APP_SESSION_MAX_AGE_DAYS` | server | | `5` | 1–14 |
 | `APP_REAUTH_WINDOW_SECONDS` | server | | `300` | |
 | `APP_TENANT_CACHE_TTL_SECONDS` | server | | `60` | |
-| `CURSOR_SIGNING_SECRET` / `CSRF_SECRET` / `UNSUBSCRIBE_SIGNING_SECRET` | server | ✓ | `<sensitive env var>` | 32+ random bytes |
+| `CURSOR_SIGNING_SECRET` / `CSRF_SECRET` / `UNSUBSCRIBE_SIGNING_SECRET` / `SESSION_BINDING_SECRET` | server | ✓ | `<sensitive env var>` | 32+ random bytes. `SESSION_BINDING_SECRET` must be identical in web and console (T-09-01 F-03); rotating it signs everyone out |
 | `VERCEL_API_TOKEN` | console + functions | ✓ | `<sensitive env var / Secret Manager>` | Scoped to team/projects; domain management |
 | `VERCEL_TEAM_ID` / `VERCEL_WEB_PROJECT_ID` | console + functions | | `<team-id>` / `<project-id>` | |
-| `EMAIL_PROVIDER` | server/functions | | `postmark` \| `resend` \| `sendgrid` \| `ses` | OQ-06 |
-| `EMAIL_PROVIDER_API_KEY` | functions | ✓ | `<Secret Manager>` | |
+| `EMAIL_PROVIDER` | server/functions | | `resend` (production); `console` (local only) | OQ-06; Resend adapter is implemented |
+| `EMAIL_PROVIDER_API_KEY` | functions | ✓ | Firebase Functions secret `EMAIL_PROVIDER_API_KEY` | Bound to `onMailQueued`; never put in `.env.local` or a committed env file |
 | `EMAIL_FROM_ADDRESS` | functions | | `no-reply@mail.example.com` | |
 | `PAYMENTS_ENABLED_PROVIDERS` | server | | `razorpay,paypal,stripe` | Feature switch per instance |
 | `PAYMENTS_SECRET_PREFIX` | server | | `agy_` | Naming of per-agency secrets |
 | `RATE_LIMIT_BACKEND` | server | | `redis` \| `memory` (local/test only) | |
+| `SECRETS_BACKEND` | server | | `secret-manager` \| `local` (emulator only; rejected in staging/production) | Per-agency payment gateway secrets (Phase 6b) |
 | `RATE_LIMIT_REDIS_URL` / `RATE_LIMIT_REDIS_TOKEN` | server | ✓ | `<sensitive env var>` | Upstash (OQ-07) |
 | `SENTRY_DSN` | server/client | | `<dsn>` | OQ-11 |
 | `LOG_LEVEL` | server | | `info` | `debug` forbidden in production |
 | `FIRESTORE_EMULATOR_HOST` / `FIREBASE_AUTH_EMULATOR_HOST` / `FIREBASE_STORAGE_EMULATOR_HOST` | local/CI | | `127.0.0.1:8080` / `:9099` / `:9199` | Must be unset in hosted envs |
 | `NEXT_PUBLIC_USE_AUTH_EMULATOR` | client local | | `true` | Rejected outside local/test |
 | `TEST_FAULT_INJECTION` / `TEST_GATEWAY_MOCKS` / `TEST_VERCEL_DOMAINS_MOCK` | test | | `false` | Rejected in production |
+
+Hosted email delivery requires `EMAIL_PROVIDER=resend` in the web and Functions environments and a verified `EMAIL_FROM_ADDRESS` in Functions. Set `EMAIL_PROVIDER_API_KEY` with `firebase functions:secrets:set EMAIL_PROVIDER_API_KEY --project <project-id>`; `onMailQueued` binds that secret. The local `console` provider only logs redacted delivery metadata and does not send to an inbox.
 
 ```dotenv
 # .env.example — placeholders only; copy to .env.local for local development

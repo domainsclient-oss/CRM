@@ -1,0 +1,5 @@
+/* Design tokens and base styles live in the shared UI package (requirements/06 §2). */
+@import "@crm/ui/globals.css";
+
+/* Generate classes used inside shared components (path is relative to this file). */
+@source "../../../../packages/ui/src";

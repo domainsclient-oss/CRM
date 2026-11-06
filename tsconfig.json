@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["firebase/test", "e2e", "test", "*.config.ts", "*.config.mts", "scripts"]
+}

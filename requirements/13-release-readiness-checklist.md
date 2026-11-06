@@ -48,6 +48,8 @@
 | S12 | [ ] Payment webhooks verified, idempotent, reconciled (TC-BILL-003); no card data anywhere (TC-SEC-016); gateway secrets only in Secret Manager | CI + review |
 | S13 | [ ] Vercel → GCP access is keyless (OIDC federation) or approved fallback key is rotated and least-privileged | IAM/Vercel review |
 | S10 | [ ] Threat model updated; residual risks accepted by owner | T-09-01 |
+| S14 | [ ] `SESSION_BINDING_SECRET` set (same value) in web and console; client IP headers (`X-Forwarded-For` / `X-Real-IP`) are set by the hosting edge, not passed through from clients (T-09-01 F-03, F-10) | Env review |
+| S15 | [ ] Client bundle scan clean on the release build (`pnpm scan:bundles`, TC-SEC-008); SBOM archived | CI artifact |
 
 ## 3. Testing and accessibility
 

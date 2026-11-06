@@ -288,7 +288,7 @@ Full detail and acceptance criteria: [01-product-requirements.md](01-product-req
 
 | ID | Question | Default if unanswered | Impact |
 |----|----------|----------------------|--------|
-| OQ-06 | Transactional email provider (Postmark, Resend, SendGrid, Amazon SES)? Must support per-agency sender domains. | Provider-agnostic interface; choose in T-05-03 | Cost, deliverability, DKIM per agency |
+| OQ-06 | Transactional email provider (Postmark, Resend, SendGrid, Amazon SES)? Must support per-agency sender domains. | **Answered 2026-10-10: Resend**, integrated later — Phase 5 ships the provider-agnostic interface + branded templates with the console provider; Resend adapter and sender domains (T-05-08) follow | Cost, deliverability, DKIM per agency |
 | OQ-07 | Rate-limit store: Upstash Redis (Vercel Marketplace) or other? | Upstash Redis (ADR-013) | Vendor count, latency, cost |
 | OQ-08 | Multi-currency deals needed? | No (A-05) | Reporting complexity |
 | OQ-11 | Error tracking: Sentry or Google Cloud Error Reporting only? | Sentry (works on Vercel) with PII scrubbing | Vendor/PII review |
@@ -305,6 +305,7 @@ Full detail and acceptance criteria: [01-product-requirements.md](01-product-req
 | OQ-23 | Must the agency console itself be white-labelled on the agency's domain at launch? | No — operator-branded `partners.example.com` | Domain/auth work for console |
 | OQ-24 | First production client regions (e.g., India `asia-south1`, US, EU)? | Decide per instance before its creation | Latency, residency, Vercel region pairing |
 | OQ-25 | Which plans/prices does each agency sell, and can agencies define their own plans and prices? | Operator defines plan templates; agencies set prices per plan in their gateway currency | Plan model, gateway plan IDs |
+| OQ-26 | CSV imports allow 10 MB (FR-IMP-001), but Vercel Functions accept request bodies up to 4.5 MB. Lower the limit to 4 MB, or upload directly to Cloud Storage with a signed, size-capped URL? | Signed direct upload (keeps 10 MB; one more step in the import flow) — found in T-09-01 (F-08) | Import UX, storage IAM, upload validation |
 
 ## 12. Related documents
 

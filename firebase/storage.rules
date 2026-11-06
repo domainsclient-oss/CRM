@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// MVP (ADR-003): no direct client access to Cloud Storage.
+// Brand assets are served from a separate public bucket via IAM, not rules.
+// PROTECTED FILE (requirements/08 §8): changes need Security review + human approval (H3).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

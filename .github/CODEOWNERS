@@ -1,0 +1,18 @@
+# Protected paths (requirements/08 §8): changes need owner review in addition to normal review.
+# Replace @sriniram7-9320 with the correct GitHub user/team once the repository is created.
+
+*                                   @sriniram7-9320
+
+/firebase/firestore.rules           @sriniram7-9320
+/firebase/storage.rules             @sriniram7-9320
+/firebase/firestore.indexes.json    @sriniram7-9320
+/firebase.json                      @sriniram7-9320
+/packages/core/                     @sriniram7-9320
+/packages/shared/src/errors.ts      @sriniram7-9320
+/apps/*/src/proxy.ts                @sriniram7-9320
+/apps/*/next.config.ts              @sriniram7-9320
+/apps/web/src/app/api/              @sriniram7-9320
+/eslint.boundaries.mjs              @sriniram7-9320
+/.github/                           @sriniram7-9320
+/instances/                         @sriniram7-9320
+/requirements/                      @sriniram7-9320

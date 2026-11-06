@@ -46,7 +46,8 @@ tenantDomains/{hostname}                  # every routable host: platform subdom
 invitationTokens/{tokenHash}              # workspace member, workspace owner, and agency staff invitations
 handoffTokens/{tokenHash}                 # only if central-auth-host fallback is adopted (02 §4.5)
 paymentEvents/{provider_eventId}          # verified webhook events (idempotency, TTL 180 d)
-privilegedSessions/{id}                   # console/partners session log for login alerts (TTL 90 d)
+privilegedSessions/{id}                   # console/partners session log for login alerts: uid, context, device fingerprint (TTL 90 d)
+revocationTokens/{tokenHash}              # single-use "this wasn't me" links from login alerts: uid, expireAt (TTL)
 idempotencyKeys/{uid_key}                 # provisioning/other idempotent requests (TTL 24 h)
 mailOutbox/{messageId}
 rateLimits/{key}                          # only if Firestore rate-limit option chosen (OQ-07)
@@ -144,122 +145,7 @@ Document ID is the lowercase hostname (punycode for IDN; dots allowed; no `/`).
 `tenantId`, `invitationId`, `expireAt` (TTL). Lookup without collection-group query.
 
 ### `handoffTokens/{sha256(token)}` · `idempotencyKeys/{uid_key}`
-Handoff: `uid`, `tenantId`, `host`, `expireAt` (60 s; TTL), `usedAt|null` — redeemed in a transaction, single use. Idempotency: `result` (e.g. `{tenantId}`), `expireAt` (24 h TTL); key = `${uid}_${clientIdempotencyKey}` (key validated `^[A-Za-z0-9_-]{8,64}# 03 — Database Schema (Cloud Firestore)
-
-> **Prev:** [02 Architecture](02-system-architecture.md) · **Next:** [04 Security](04-security-and-compliance.md)
-> Firestore Native mode, single database `(default)` per environment project. Location per OQ-04 (immutable). Limits cited were checked 2026-10-09 against Google's quotas page; re-verify numeric limits in T-01-09.
-
-## Contents
-
-1. [Design principles](#1-design-principles)
-2. [Collection tree](#2-collection-tree)
-3. [Common fields](#3-common-fields)
-4. [Platform-level collections](#4-platform-level-collections)
-5. [Tenant-level collections](#5-tenant-level-collections)
-6. [Relationships and references](#6-relationships-and-references)
-7. [Access patterns and tenant ownership](#7-access-patterns-and-tenant-ownership)
-8. [Query patterns and indexes](#8-query-patterns-and-indexes)
-9. [Pagination and search](#9-pagination-and-search)
-10. [Firestore limitations and design responses](#10-firestore-limitations-and-design-responses)
-11. [Cost optimization](#11-cost-optimization)
-12. [Transactions and consistency](#12-transactions-and-consistency)
-13. [Retention, deletion, backups, recovery](#13-retention-deletion-backups-recovery)
-14. [Migrations](#14-migrations)
-15. [Sample documents (fictional)](#15-sample-documents-fictional)
-
----
-
-## 1. Design principles
-
-1. **Tenant data lives under `tenants/{tenantId}`** (ADR-004). Every tenant document *also* stores `tenantId` (verified on read; enables safe collection-group queries for system jobs).
-2. **Server-only access** via Admin SDK (ADR-003). Client rules deny all.
-3. **Denormalize for reads** (display names, counts) — Firestore has no joins. Denormalized copies are labeled `*Snapshot` or `*Name` and refreshed by background jobs when the source changes.
-4. **Every query shape is declared** in this document and in `firebase/firestore.indexes.json`. No ad-hoc query shapes in code (R-04).
-5. **Timestamps** are Firestore `Timestamp` set from server (`FieldValue.serverTimestamp()` for create/update).
-6. **Money** in integer minor units (ADR-014).
-7. **Schema version** field on every document for migrations.
-
-## 2. Collection tree
-
-```
-users/{uid}
-platformAdmins/{uid}
-plans/{planId}
-tenantSlugs/{slug}
-tenantDomains/{hostname}
-invitationTokens/{tokenHash}
-handoffTokens/{tokenHash}                 # onboarding handoff (05 §3.1); OAuth central-host option (02 §4.4)
-idempotencyKeys/{uid_key}                 # provisioning/other idempotent requests (TTL 24 h)
-mailOutbox/{messageId}
-rateLimits/{key}                          # only if Firestore rate-limit option chosen (OQ-07)
-platformAuditLogs/{id}
-erasureLog/{id}
-migrations/{migrationId}
-tenants/{tenantId}
-  ├─ members/{uid}
-  ├─ invitations/{invitationId}
-  ├─ companies/{companyId}
-  ├─ contacts/{contactId}
-  ├─ leads/{leadId}
-  ├─ deals/{dealId}
-  ├─ pipelines/{pipelineId}
-  ├─ tasks/{taskId}
-  ├─ activities/{activityId}
-  ├─ notifications/{notificationId}
-  ├─ tagDefinitions/{tagId}
-  ├─ emailTemplates/{templateKey}
-  ├─ jobs/{jobId}
-  ├─ usage/current
-  └─ auditLogs/{auditId}
-```
-
-## 3. Common fields
-
-Present on all tenant CRM records (companies, contacts, leads, deals, tasks, activities):
-
-| Field | Type | Req | Notes |
-|-------|------|-----|------|
-| `id` | string | ✓ | Mirrors document ID |
-| `tenantId` | string | ✓ | Must equal path segment |
-| `ownerUid` | string | ✓ (not activities: `createdBy` acts as owner) | Must be an active member at write time |
-| `createdAt` / `updatedAt` | Timestamp | ✓ | Server timestamps |
-| `createdBy` / `updatedBy` | string (uid) | ✓ | |
-| `isDeleted` | boolean | ✓ | Default `false`; included in all list indexes |
-| `deletedAt` / `deletedBy` | Timestamp/string \| null | | Set on soft delete |
-| `tags` | string[] | | ≤ 20, normalized lowercase |
-| `searchTokens` | string[] | | Prefix tokens (§9.2), ≤ 60 entries |
-| `schemaVersion` | number | ✓ | Starts at 1 |
-
-## 4. Platform-level collections
-
-### `users/{uid}`
-| Field | Type | Req | Validation / notes |
-|-------|------|-----|--------------------|
-| `email` | string | ✓ | Mirror of Auth email; lowercase |
-| `displayName` | string | | 1–120 |
-| `photoPath` | string \| null | | Storage path in brand-assets bucket |
-| `timezone` | string | | IANA |
-| `theme` | `'system'\|'light'\|'dark'` | | |
-| `tenantIds` | string[] | ✓ | Active memberships (for workspace switcher; ≤ 50). Source of truth remains `members` docs. |
-| `createdAt`, `lastLoginAt` | Timestamp | ✓ | |
-| `deletionRequestedAt` | Timestamp \| null | | FR-PRIV-003 |
-
-### `platformAdmins/{uid}`
-`role: 'superadmin' | 'support'`, `mfaRequired: true`, `createdAt`, `createdBy`. Written only by a bootstrap script or another superadmin (console).
-
-### `plans/{planId}`
-`name`, `entitlements: { limits: {seats, records, importRowsPerJob}, features: {reports, import, auditExport}, whiteLabel: {removePoweredBy} }`, `version`, `isPublic`, `trialDays?`.
-
-### `tenantSlugs/{slug}`
-`tenantId`, `createdAt`, `status: 'active' | 'quarantined'`, `quarantinedUntil?`. Created in provisioning transaction → uniqueness guarantee.
-
-### `tenantDomains/{hostname}`
-`tenantId`, `type: 'subdomain' | 'custom'`, `verified: boolean`, `verificationToken?` (custom, P3), `createdAt`. Document ID is lowercase hostname (dots allowed in IDs; no `/`).
-
-### `invitationTokens/{sha256(token)}`
-`tenantId`, `invitationId`, `expireAt` (TTL). Lookup without collection-group query.
-
-).
+Handoff: `uid`, `tenantId`, `host`, `expireAt` (60 s; TTL), `usedAt|null` — redeemed in a transaction, single use. Idempotency: `result` (e.g. `{tenantId}`), `expireAt` (24 h TTL); key = `${uid}_${clientIdempotencyKey}` (key validated `^[A-Za-z0-9_-]{8,64}$`).
 
 ### `mailOutbox/{id}`
 `tenantId|null`, `template`, `to` (single address), `variables` (escaped at render), `status: queued|sending|sent|failed|dead`, `attempts`, `lastError?`, `createdAt`, `expireAt` (TTL 30 d). Contains PII → TTL short.

@@ -587,7 +587,7 @@ Events (minimum): auth session created/revoked (per tenant), member invited/join
 ### FR-PUB-001 · P1 · Marketing site
 Operator site (for prospective agencies). Pages: Home, Features, For Agencies (white-label program), Pricing/Partner plans, Security, About, Contact / Request a demo, Login entry (workspace finder), Privacy Policy, Terms, Cookie Policy. No sign-up page.
 
-**AC** Meets NFR-SEO-002, NFR-PERF-001, NFR-A11Y-001; content guidelines in [07](07-seo-aeo-and-performance.md). Workspace finder sends an email listing the user's workspaces (no on-screen enumeration).
+**AC** Meets NFR-SEO-002, NFR-PERF-001, NFR-A11Y-001; content guidelines in [07](07-seo-aeo-and-performance.md). Demo requests are stored and send a confirmation email only to the address supplied in the form; honeypot submissions are not stored or emailed. Workspace finder sends an email listing the user's workspaces (no on-screen enumeration).
 
 ### FR-PUB-002 · P2 · Docs/help center and FAQ
 **AC** Statically generated docs with search (client-side index of public content), FAQ with `FAQPage` structured data, "last updated" dates.

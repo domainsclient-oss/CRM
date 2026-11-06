@@ -1,0 +1,25 @@
+{
+  "agency": {
+    "name": "Pilot Agency",
+    "slug": "pilot-agency",
+    "ownerEmail": "owner@pilot-agency.example",
+    "maxWorkspaces": 10,
+    "maxSeatsTotal": 100,
+    "baseDomain": "crm.pilot-agency.example"
+  },
+  "workspaces": [
+    { "name": "Client One", "slug": "client-one", "ownerEmail": "owner@client-one.example" },
+    {
+      "name": "Client Two",
+      "slug": "client-two",
+      "ownerEmail": "owner@client-two.example",
+      "domain": { "type": "agency_subdomain" }
+    },
+    {
+      "name": "Client Three",
+      "slug": "client-three",
+      "ownerEmail": "owner@client-three.example",
+      "domain": { "type": "custom", "host": "crm.client-three.example" }
+    }
+  ]
+}

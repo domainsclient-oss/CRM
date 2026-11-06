@@ -24,7 +24,7 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -59,7 +59,7 @@ jobs:
       # Step 4 is ready (scripts/smoke-deploy.mjs, read-only; validated locally 2026-11-05):
       - uses: pnpm/action-setup@v4
         if: vars.DEPLOY_ENABLED == 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: vars.DEPLOY_ENABLED == 'true'
         with:
           node-version: 24

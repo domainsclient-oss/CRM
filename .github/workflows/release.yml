@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -57,7 +57,7 @@ jobs:
       # 3. vercel deploy --prebuilt --prod for web and console
       # 4. smoke tests against the instance; on failure: vercel rollback and stop
       # Step 4 is ready (scripts/smoke-deploy.mjs, read-only; validated locally 2026-11-05):
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         if: vars.DEPLOY_ENABLED == 'true'
       - uses: actions/setup-node@v4
         if: vars.DEPLOY_ENABLED == 'true'

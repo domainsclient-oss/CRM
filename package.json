@@ -23,6 +23,7 @@
     "uat:seed": "tsx --conditions=react-server scripts/uat-seed.ts",
     "env:parity": "tsx --conditions=react-server scripts/env-parity.ts",
     "ops": "tsx scripts/ops.ts",
+    "admin:bootstrap": "tsx --conditions=react-server --env-file=apps/web/.env.local scripts/bootstrap-admin.ts",
     "restore:drill": "tsx --conditions=react-server scripts/restore-drill.ts",
     "test:e2e:smoke": "playwright test --project=chromium-desktop",
     "test:rules": "node scripts/with-java.mjs firebase emulators:exec --project demo-crm --only firestore,storage \"vitest run --project rules\"",

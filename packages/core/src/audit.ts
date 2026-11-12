@@ -10,6 +10,7 @@ export const AUDIT_ACTIONS = [
   "auth.session_created",
   "auth.session_revoked",
   "auth.privileged_login",
+  "platform.admin_bootstrapped",
   "agency.created",
   "agency.suspended",
   "agency.reactivated",

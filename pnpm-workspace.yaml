@@ -17,3 +17,6 @@ overrides:
   "body-parser@<1.20.9": "^1.20.9"
   "re2js@>=2.2.0 <2.8.7": "^2.8.7"
   "qs@>=6.7.0 <6.16.1": "^6.16.1"
+  # jose 6 is ESM-only; jwks-rsa (firebase-admin/auth) require()s it, which fails on runtimes
+  # without require(esm) (seen on Vercel). jose 5 has the same APIs it uses, with a CJS build.
+  "jwks-rsa>jose": "5.10.0"
